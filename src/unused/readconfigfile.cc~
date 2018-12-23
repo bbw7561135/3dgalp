@@ -1,0 +1,30 @@
+/***********************************************************
+*   Copyright (c) 2015-  Company Name.
+*   All rights reserved.
+*
+*   CODE NAME : Prometheus
+*   filename : readconfigfile.cc
+*   description :
+*   
+*   current version : 1.0
+*   author : Wei Liu
+*   email : liuwei@ihep.ac.cn
+*   date : 2018.12.11
+*
+************************************************************/
+
+#include<iostream>
+#include<sstream>
+#include<fstream>
+#include<string>
+#include<vector>
+
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+
+#include"std_lib_facilities.h"
+#include"definition.h"
+#include"writeconfigfile.h"
+
+using namespace std;

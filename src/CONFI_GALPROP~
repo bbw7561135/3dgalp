@@ -1,0 +1,230 @@
+#   Emax can not set too large, due to the failure of the effect of Kcapture
+
+COMPUTATION_RESULT           = SPECTRA
+
+CONFINAME                    = lw1007
+GALDEFPATH                   = /home/liuwei/Research/PROGRAM/CRPropagation/galprop/55_2D_v1.1/galdef
+FITSPATH                     = /home/liuwei/Research/PROGRAM/CRPropagation/galprop/FITS
+DATAPATH                     = /home/liuwei/Research/PROGRAM/CRPropagation/galprop/55/galpdata
+OUTPUTPATH                   = ../res
+#/home/liuwei/Research/PROGRAM/CRPropagation/55
+OUTPUTPREFIX                 = output/
+#   in strickland
+
+
+RUNNUMBER                    = test_prot_
+#RUNNUMBER                    = test_guoyq_
+MODELNAME                    = dr
+
+n_spatial_dimensions = 2
+r_min                = 0
+#     min r
+r_max                = +20
+#     max r
+dr                   = 1.
+#     delta r
+
+x_min                = -20
+#     min x
+x_max                = 20
+#     max x
+dx                   = 1.
+#     delta x
+y_min                = -20
+#     min y
+y_max                = +20
+#     max y
+dy                   = 1.
+#     delta y
+
+INCLUDEHALOL                 = 1
+#  dr
+#z_min                        = -10.
+z_min                        = -5.
+#  kpc
+#z_max                        = 10.
+z_max                        = 5.
+#  kpc
+dz                           = 1.
+#  kpc
+
+p_Ekin_grid          = 1
+#   p: 0, Ekin: 1
+Ekin_min             = 1e3
+#   min kinetic energy per nucleon (MeV)
+Ekin_max             = 1e12
+#   max kinetic energy per nucleon (MeV)
+Ekin_factor          = 1.5
+#   kinetic energy per nucleon factor
+
+prop_r               = 1
+#   1=propagate in r (2D)
+prop_x               = 1
+#   1=propagate in x (3D)
+prop_y               = 1
+#   1=propagate in y (3D)
+prop_z               = 1
+#   1=propagate in z (2D, 3D)
+prop_p               = 1
+#   1=propagate in p (2D, 3D)
+
+
+#  transport parameters
+INCLUDEDIFFUSION             = 1
+#  dr
+D0_xx                        = 4.16
+#  10^28 cm^2/s, diffusion coefficient at reference rigidity
+D_rigid_br                   = 4.
+#  10^3 MV, reference rigidity for diffusion coefficient
+D_g_1                        = 0.5
+#  diffusion coefficient index below reference rigidity
+#  diffusion coefficient index for parallel diffusion D∥, here use Dₓₓ
+D_g_2                        = 0.5
+#  diffusion coefficient index above reference rigidity
+#  diffusion coefficient index for perpendicular diffusion D⊥, here use Dyy
+eta                          = 1.
+#  D(p)=beta^eta*(p/p_br)^D_g_?
+
+epsilon                      = .1
+#  ε = D₀⊥/D₀∥
+
+
+theta                        = 45.
+#   rotation angle of diffusion tensor
+
+# from GUO YI QING
+DIFFUSION_GUO                = 0
+ztD0                         = 0.78
+D0Nm                         = 1.5
+D0Halo                       = 0.9
+D0down                       = 0.15
+DeltaNm                      = 1.15
+DeltaHalo                    = 0.5
+Deltadown                    = 0.2
+p0D0                         = 1.53675
+p1D0                         = -7.51922e-02
+p2D0                         = 7.21040e-02
+p3D0                         = -2.61292e-02
+p4D0                         = 4.31519e-03
+p5D0                         = -4.08128e-04
+p6D0                         = 2.22612e-05
+p7D0                         = -6.42310e-07
+p8D0                         = 7.54753e-09
+powcutoff                    = 2
+powindex                     = 8
+
+# from Hongbo Hu
+DIFFUSION_HU                 = 1
+
+ASYMMETRIC_DIFFUSION         = 0
+#  1, the origin is not set at Galactic center
+
+INCLUDESPIRALDIFFUSION       = 0
+D0_arm                       = 5
+D_arm_rigid_br               = 4
+#  10^3 MV, reference rigidity for diffusion coefficient
+D_arm_g_1                    = 0.35
+D_arm_g_2                    = 0.55
+
+
+INCLUDEREACCELERATION        = 1
+v_Alfven                     = 48.4
+#  km s^-1, alfven speed
+
+INCLUDECONVECTIVEWIND        = 1
+v0_conv                      = 0.
+#  km s^-1
+dvdz_conv                    = 24.2
+#  km s^-1 kpc^-1, v_conv = v0_conv +dvdz_conv*dz
+
+
+#  source parameter
+INCLUDEPROTON                = 1
+nuc_g_0                      = 2.04
+nuc_rigid_br0                = 0
+nuc_g_1                      = 2.04
+#  nucleus injection index below reference rigidity
+nuc_rigid_br                 = 10.715
+#  1e3 MV, reference rigidity for nucleus injection index
+nuc_g_2                      = 2.33
+#  nucleus injection index index above reference
+
+proton_norm_Ekin             = 1.e2
+#  1e3 MV, proton kinetic energy for normalization (GeV)
+proton_norm_flux             = 4.63
+#  10^-9 cm^-2 sr^-1 s^-1 MeV^-1, renorm nuclei/flux of protons at norm energy
+
+INCLUDEELECTRON              = 1
+electron_g_0                 = 1.79
+#  electron injection index below electron_rigid_br0
+electron_rigid_br0           = 2.741574
+#  10^3 MV, reference rigidity0 for electron injection index
+electron_g_1                 = 2.83
+#  electron injection index below reference rigidity
+electron_rigid_br            = 72.11075
+#  10^3 MV, reference rigidity for electron injection index
+electron_g_2                 = 2.595
+#  electron injection index index above reference rigidity
+
+electron_norm_Ekin           = 2.5e1
+#  10^3 MeV, electron kinetic energy for normalization
+electron_norm_flux           = 15.4
+#  10^-10 cm^-2 sr^-1 s^-1 MeV^-1, flux of electrons at normalization energy
+
+max_Z                        = 9
+#  maximum number of nucleus Z listed
+
+iso_abundance_01_001         = 1.06e+06
+#   H 
+iso_abundance_01_002         =     34.8    
+iso_abundance_02_003         =    9.033
+#   He
+iso_abundance_02_004         = 7.199e+04    
+iso_abundance_03_006         =        0
+#   Li
+iso_abundance_03_007         =        0    
+iso_abundance_04_009         =        0
+#   Be
+iso_abundance_05_010         =        0
+#   B 
+iso_abundance_05_011         =        0    
+iso_abundance_06_012         =     2819
+#   C 
+iso_abundance_06_013         = 5.268e-07    
+iso_abundance_07_014         =    182.8
+#   N 
+iso_abundance_07_015         = 5.961e-05    
+iso_abundance_08_016         =     3822
+#   O 
+
+primary_electrons            = 0
+#  1=compute primary electrons
+primary_positrons            = 0
+secondary_electrons          = 0
+#  1=compute secondary electrons
+secondary_positrons          = 0
+#  1=compute secondary positrons
+knock_on_electrons           = 0
+#  1,2 1=compute knock-on electrons (p,He) 2= use factor 1.75 to scale pp,pHe
+
+secondary_antiprotons        = 0
+#  1,2= calculate: 1=uses nuclear scaling; 2=uses nuclear factors (Simon et al 1998)
+tertiary_antiprotons         = 0
+#  1=compute tertiary antiprotons
+secondary_protons            = 1
+#  1=compute secondary protons, important for proton
+
+fragmentation        = 1
+#   1=include fragmentation, important for proton
+momentum_losses      = 1
+#   1=include momentum losses
+radioactive_decay    = 1
+#   1=include radioactive decay
+K_capture            = 1
+#   1=include K-capture
+ionization_rate      = 1
+#   1=compute ionization rate
+ionization_losses    = 1
+#   To turn off separate energy loss processes
+coulomb_losses       = 1
+#   To turn off separate energy loss processes

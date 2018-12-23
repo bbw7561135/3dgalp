@@ -1,0 +1,490 @@
+/***********************************************************
+ *   Copyright (c) 2015-  Company Name.
+ *   All rights reserved.
+ *
+ *   CODE NAME : Prometheus
+ *   filename : B_field_3D_model2.cc
+ *   description : 
+ *
+ *
+ *   current version : 1.0
+ *   author : Wei Liu
+ *   email : liuwei@ihep.ac.cn
+ *   date : 2017.08.11
+ *
+ ************************************************************/
+
+#include<iostream>
+#include<fstream>
+#include<sstream>
+#include<string>
+#include<vector>
+#include<map>
+
+#include<cstdio>
+#include<cstdlib>
+#include<cmath>
+#include<ctime>
+
+#include<gsl/gsl_math.h>
+
+#include"std_lib_facilities.h"
+
+#include"definition.h"
+#include"Galpani.h"
+
+using namespace std;
+
+// B = Bₓ eᵢ +By eⱼ +Bz eₖ = Bᵣ eᵣ +B_ϕ e_ϕ +Bz e_z
+// eᵣ = cosϕeᵢ +sinϕeⱼ, e_ϕ = cos(ϕ+π/2)eᵢ +sin(ϕ+π/2)eⱼ = -sinϕeᵢ +cosϕeⱼ
+
+// Bₓ = (Bᵣeᵣ +B_ϕe_ϕ)·eᵢ = Bᵣ eᵣ·eᵢ +B_ϕ e_ϕ·eᵢ
+//    = Bᵣ(cosϕeᵢ +sinϕeⱼ)·eᵢ +B_ϕ(-sinϕeᵢ +cosϕeⱼ)·eᵢ
+//    = Bᵣcosϕ -B_ϕsinϕ
+
+// By = (Bᵣeᵣ +B_ϕe_ϕ)·eⱼ = Bᵣ eᵣ·eⱼ +B_ϕ e_ϕ·eⱼ
+//    = Bᵣ (cosϕeᵢ +sinϕeⱼ)·eⱼ +B_ϕ (-sinϕeᵢ +cosϕeⱼ)·eⱼ
+//    = Bᵣsinϕ +B_ϕcosϕ
+int Galpani::B_field_3D(double x, double y, double z, double &B, double &Br, double &B_phi, double &Bx, double &By, double &Bz){
+  double r, phi;
+  r = sqrt(x*x+y*y);
+  phi = atan2(y, x);
+  Br = B_phi = Bx = By = Bz = 0.;
+
+  
+  // disk component
+  // Deriving the Global Structure of the Galactic Magnetic Field from Faraday Rotation Measures of Extragalactic Sources
+  // Pshirkov, M. S.; Tinyakov, P. G.; Kronberg, P. P.; Newton-McGee, K. J.
+  // 2011ApJ...738..192P
+  // 10.1088/0004-637X/738/2/192
+  
+  // logarithmic spiral model
+  // There are two versions of this model depending on whether the direction of the field in two different arms is the same (axisymmetric or ASS model) or opposite (bisymmetric or BSS model).
+#if 0
+  double p = -M_PI*6./180., Z0_DISK = 1./*kpc*/, d = -.6/*kpc*/, B0_DISK = 2./*μG*/, Rc_DISK = 5./*kpc*/, b, phi_, B_r_, B_;
+  // p is the pitch angle and d is the distance to the first field reversal. Negative d means that the nearest reversal occurs in the direction to the Galactic center; positive d corresponds to the opposite direction.
+  b = 1./tan(p); // b = 1/tan(p)
+  phi_ = b*log(1+d/R_SUN) -M_PI/2.; // ϕ_ = błn(1+d/R⊙)-π/2
+  // The amplitude of the GMF is a function of the radial coordinate r. Rc is the radius of the central region where the disk field is assumed to have constant magnitude.
+  if(r > Rc_DISK)
+    B_r_ = B0_DISK *R_SUN/r/cos(phi_); // B₀·R⊙/r/cosϕ_, r > Rc
+  if(r < Rc_DISK)
+    B_r_ = B0_DISK *R_SUN/Rc_DISK/cos(phi_); // B₀·R⊙/Rc/cosϕ_, r < Rc
+  // for ASS model
+  if(model == "ASS")
+    B_ = B_r_ *fabs(cos(phi -b*log(r/R_SUN) +phi_) ) *exp(-fabs(z)/Z0_DISK); // B(r)|cos(ϕ-błn(r/R⊙)+ϕ_)|·e⁻|ᶻ|/ᶻ⁰
+  // for BSS model
+  if(model == "BSS")
+    B_ = B_r_ *cos(phi -b*log(r/R_SUN) +phi_) *exp(-fabs(z)/Z0_DISK); // B(r)cos(ϕ-błn(r/R⊙)+ϕ_)·e⁻|ᶻ|/ᶻ⁰
+  
+  B_phi = B*cos(p);
+  Br = B*sin(p);
+#endif
+  
+  // The second model of the disk field was the axisymmetric field with reversals in concentric rings.
+  // Radio observational constraints on Galactic 3D-emission models
+  // Sun, X. H.; Reich, W.; Waelkens, A.; Enßlin, T. A.
+  // 2008A&A...477..573S
+  // 10.1051/0004-6361:20078671
+  // B(r,ϕ,z) = D₁(r,z)D₂(r)
+  // D₁(r,z) = B₀exp[-(r-R_⊙)/R₀-|z|/z₀], r>Rc
+  //         = B₀exp[-|z|/z₀], r≤Rc
+  // D₂(r) = 1, r > 7.5 kpc
+  //       = -1, 6 kpc < r ≤ 7.5 kpc
+  //       = 1, 5 kpc < r ≤ 6 kpc
+  //       = -1, r ≤ 5 kpc
+  double B0_DISK = 2./*μG*/, Rc_DISK = 5./*kpc*/, R0_DISK = 8./*kpc*/, Z0_DISK = 1./*kpc*/;
+#if 1
+  if(r <= Rc_DISK)
+    B_phi = B0_DISK*exp(-fabs(z)/Z0_DISK);
+  if(r > Rc_DISK)
+    B_phi = B0_DISK*exp(-fabs(z)/Z0_DISK)*exp(-(r-R_SUN)/R0_DISK);
+  if(r == 0) B_phi = 0;
+#endif
+  // for test, modified by Wei Liu, 2017.08.22
+#if 0
+  if(r <= Rc_DISK)
+    B_phi = (B0_DISK+(B0_DISK*exp(-(r-R_SUN)/R0_DISK) -B0_DISK)*pow(r/Rc_DISK, 6) )*exp(-fabs(z)/Z0_DISK);
+  if(r > Rc_DISK)
+    B_phi = B0_DISK*exp(-fabs(z)/Z0_DISK)*exp(-(r-R_SUN)/R0_DISK);
+#endif
+  // for test, modified by Wei Liu, 2017.08.22
+#if 0
+  B_phi = B0_DISK*exp(-fabs(z)/Z0_DISK)*exp(-(r-R_SUN)/R0_DISK);
+  if(r == 0) B_phi = 0;
+#endif
+  
+#if 1
+  if(r > 6 && r <= 7.5) B_phi *= -1;
+  if(r <= 5) B_phi *= -1;
+#endif
+  Bx += -B_phi*sin(phi);
+  By += B_phi*cos(phi);
+
+
+  
+  
+  // halo component
+  // Radio observational constraints on Galactic 3D-emission models
+  // Sun, X. H.; Reich, W.; Waelkens, A.; Enßlin, T. A.
+  // 2008A&A...477..573S
+  // 10.1051/0004-6361:20078671
+  // the direction of the field is reversed in the southern hemisphere
+  // B_ϕᴴ(r,z) = B₀ᴴ[1+((|z|-z₀ᴴ)/z₁ᴴ)²]⁻¹·r/R₀ᴴ·exp[1-r/R₀ᴴ]
+  double B0_HALO = 4./*μG*/, Z0_HALO = 1.3/*kpc*/, Z11_HALO = 0.25/*kpc*/, Z12_HALO = 0.4/*kpc*/, R0_HALO = 8./*kpc*/;
+#if 1
+  B_phi = B0_HALO;
+  
+  if(fabs(z) <= Z0_HALO)
+    B_phi /= (1+pow( (fabs(z)-Z0_HALO)/Z11_HALO, 2.) );
+  if(fabs(z) > Z0_HALO)
+    B_phi /= (1+pow( (fabs(z)-Z0_HALO)/Z12_HALO, 2.) );
+  
+  B_phi *= r/R0_HALO*exp(1-r/R0_HALO);
+
+#if 1
+  if(z > 0){
+    Bx += -B_phi*sin(phi);
+    By += B_phi*cos(phi);
+  }
+  if(z < 0){
+    Bx += B_phi*sin(phi);
+    By += -B_phi*cos(phi);
+  }
+  if(z == 0){
+    Bx += 0.;
+    By += 0.;
+  }
+#endif
+#endif
+  // modified by Wei Liu, 2017.08.24
+#if 0
+  Z0_HALO = 1.26/*kpc*/;
+  if(fabs(z) <= Z0_HALO){
+    B_phi = pow(z, 4.)/2;
+    B_phi /= (1/R0_HALO*exp(1-1/R0_HALO));
+  }
+  if(fabs(z) > Z0_HALO){
+    B_phi = pow(Z0_HALO, 4.)/2;
+    B_phi /= (1/R0_HALO*exp(1-1/R0_HALO));
+    B_phi /= (1+pow( (fabs(z)-Z0_HALO)/Z12_HALO, 2.) );
+  }
+  
+  B_phi *= r/R0_HALO*exp(1-r/R0_HALO);
+
+#if 1
+  if(z >= 0){
+    Bx += -B_phi*sin(phi);
+    By += B_phi*cos(phi);
+  }
+  if(z < 0){
+    Bx += B_phi*sin(phi);
+    By += -B_phi*cos(phi);
+  }
+#endif
+#endif
+
+
+  
+  // poloidal magnetic field, X-shaped component
+  // A New Model of the Galactic Magnetic Field
+  // Jansson, Ronnie; Farrar, Glennys R.
+  // 2012ApJ...757...14J
+  // 10.1088/0004-637X/757/1/14
+
+  // Bˣ(r,z) = B₀ˣ(R_p/r)²e⁻ᴿᵖ/ᴿₓ, (r ≤ rₓᶜ)
+  //         = B₀ˣ(R_p/r)e⁻ᴿᵖ/ᴿₓ,  (r > rₓᶜ)
+
+  // Θˣ(r,z) = tan⁻¹[|z|/(r-R_p)], (r ≤ rₓᶜ)
+  //         = Θ₀ˣ,                (r > rₓᶜ)
+
+  // R_p = rrₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ),  (r ≤ rₓᶜ)
+  //     = r-|z|/tanΘ₀ˣ,           (r > rₓᶜ)
+  
+  // Bzᵖᵒˡ(r,z) = Bˣ(r,z)sin[Θˣ(r,z)]
+  // Bᵣᵖᵒˡ(r,z) = Bˣ(r,z)cos[Θˣ(r,z)]
+#if 1
+  double B_X, r_p, theta_X, B0_X = 4.6/*μG*/, theta0_X = M_PI*49./180., Rc_X = 4.8/*kpc*/, R_X = 2.9/*kpc*/;
+#if 1
+  if(r <= Rc_X){
+    r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+    
+    theta_X = atan2(fabs(z), (r-r_p) );
+    if(z == 0){
+      theta_X = atan2(Rc_X*tan(theta0_X), r); // |z|/(r-R_p) = |z|/r/(1-rₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/((rₓᶜ+|z|/tanΘ₀ˣ-rₓᶜ)/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/(|z|/tanΘ₀ˣ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = rₓᶜ·tanΘ₀ˣ/r
+      if(r == 0) theta_X = M_PI/2;
+    }
+    
+    if(r == 0)
+      B_X = B0_X*pow(Rc_X/(Rc_X+fabs(z)/tan(theta0_X) ), 2)*exp(-r_p/R_X);
+    else
+      B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+  }
+  
+  if(r > Rc_X){
+    r_p = r-fabs(z)/tan(theta0_X);
+    theta_X = theta0_X;
+    
+    B_X = B0_X*pow(r_p/r, 1)*exp(-r_p/R_X);
+  }
+#endif
+  // A New Model of the Galactic Magnetic Field
+  // Jansson, Ronnie; Farrar, Glennys R. 
+#if 0
+  r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+  if(r_p <= Rc_X){
+    theta_X = atan2(fabs(z), (r-r_p) );
+    if(z == 0){
+      theta_X = atan2(Rc_X*tan(theta0_X), r); // |z|/(r-R_p) = |z|/r/(1-rₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/((rₓᶜ+|z|/tanΘ₀ˣ-rₓᶜ)/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/(|z|/tanΘ₀ˣ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = rₓᶜ·tanΘ₀ˣ/r
+      if(r == 0) theta_X = M_PI/2;
+    }
+    
+    if(r == 0)
+      B_X = B0_X*pow(Rc_X/(Rc_X+fabs(z)/tan(theta0_X) ), 2)*exp(-r_p/R_X);
+    else
+      B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+  }
+  
+  if(r_p > Rc_X){
+    r_p = r-fabs(z)/tan(theta0_X);
+    theta_X = theta0_X;
+    
+    B_X = B0_X*pow(r_p/r, 1)*exp(-r_p/R_X);
+  }
+#endif
+  // for test, modified by Wei Liu, 2017.08.23
+#if 0
+  r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+  
+  theta_X = atan2(fabs(z), (r-r_p) );
+  if(z == 0){
+    theta_X = atan2(Rc_X*tan(theta0_X), r); // |z|/(r-R_p) = |z|/r/(1-rₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/((rₓᶜ+|z|/tanΘ₀ˣ-rₓᶜ)/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/(|z|/tanΘ₀ˣ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = rₓᶜ·tanΘ₀ˣ/r
+    if(r == 0) theta_X = M_PI/2;
+  }
+    
+  if(r == 0)
+    B_X = B0_X*pow(Rc_X/(Rc_X+fabs(z)/tan(theta0_X) ), 2)*exp(-r_p/R_X);
+  else
+    B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+#endif
+  // for test, modified by Wei Liu, 2017.08.23
+#if 0
+  r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+  
+  theta_X = atan2(fabs(z), (r-r_p) );
+  if(z == 0){
+    theta_X = atan2(Rc_X*tan(theta0_X), r); // |z|/(r-R_p) = |z|/r/(1-rₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/((rₓᶜ+|z|/tanΘ₀ˣ-rₓᶜ)/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/(|z|/tanΘ₀ˣ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = rₓᶜ·tanΘ₀ˣ/r
+    if(r == 0) theta_X = M_PI/2;
+  }
+
+  if(r == 0)
+    B_X = B0_X*pow(Rc_X/(Rc_X+fabs(z)/tan(theta0_X) ), 2)*exp(-r_p/R_X);
+  else
+    B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+#endif
+  // for test, modified by Wei Liu, 2017.08.24
+#if 0
+  if(r <= Rc_X){
+    r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+    
+    theta_X = atan2(fabs(z), (r-r_p) );
+    if(z == 0){
+      theta_X = atan2(Rc_X*tan(theta0_X), r); // |z|/(r-R_p) = |z|/r/(1-rₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/((rₓᶜ+|z|/tanΘ₀ˣ-rₓᶜ)/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/(|z|/tanΘ₀ˣ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = rₓᶜ·tanΘ₀ˣ/r
+      if(r == 0) theta_X = M_PI/2;
+    }
+    
+    if(r == 0)
+      B_X = B0_X*pow(Rc_X/(Rc_X+fabs(z)/tan(theta0_X) ), 2)*exp(-r_p/R_X);
+    else
+      B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+  }
+  
+  if(r > Rc_X){
+    // r_p = r-fabs(z)/tan(theta0_X);
+    // theta_X = theta0_X;
+    // B_X = B0_X*pow(r_p/r, 1)*exp(-r_p/R_X);
+
+    r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+    theta_X = atan2(fabs(z), (r-r_p) );
+    if(z == 0){
+      theta_X = atan2(Rc_X*tan(theta0_X), r);
+      if(r == 0) theta_X = M_PI/2;
+    }
+    B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+    //B_X = B0_X*pow(r_p/r, 2);
+  }
+#endif
+
+  Br = B_X*cos(theta_X);
+  // if(x >= 0)
+  //   Br = B_X*cos(theta_X);
+  // if(x < 0)
+  //   Br = -B_X*cos(theta_X);
+
+  // if(z == 0){
+  //   Bx += 0;
+  //   By += 0;
+  //   Bz += B_X*sin(theta_X);
+  // }
+  if(z >= 0){
+    Bx += Br*cos(phi);
+    By += Br*sin(phi);
+    Bz += B_X*sin(theta_X);
+  }
+  if(z < 0){
+    Bx -= Br*cos(phi);
+    By -= Br*sin(phi);
+    Bz += B_X*sin(theta_X);
+  }
+#endif
+  // for test, modified by Wei Liu, 2017.08.26
+  // r²-z²=1, r_=(1+z²)¹/², if r-r_>0, tanθₓ=dz/dr=r_/z
+  // r²/a²-z²/b²=1, 
+#if 0
+  double r_, a2, dzdr;
+  if(r <= Rc_X){
+    r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+    
+    theta_X = atan2(fabs(z), (r-r_p) );
+    if(z == 0){
+      theta_X = atan2(Rc_X*tan(theta0_X), r); // |z|/(r-R_p) = |z|/r/(1-rₓᶜ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/((rₓᶜ+|z|/tanΘ₀ˣ-rₓᶜ)/(rₓᶜ+|z|/tanΘ₀ˣ) ) = |z|/r/(|z|/tanΘ₀ˣ/(rₓᶜ+|z|/tanΘ₀ˣ) ) = rₓᶜ·tanΘ₀ˣ/r
+      if(r == 0) theta_X = M_PI/2;
+    }
+    
+    if(r == 0)
+      B_X = B0_X*pow(Rc_X/(Rc_X+fabs(z)/tan(theta0_X) ), 2)*exp(-r_p/R_X);
+    else
+      B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+  }
+  
+  if(r > Rc_X){
+    // r_p = r-fabs(z)/tan(theta0_X);
+    // theta_X = theta0_X;
+    // B_X = B0_X*pow(r_p/r, 1)*exp(-r_p/R_X);
+
+    r_p = r*Rc_X/(Rc_X+fabs(z)/tan(theta0_X) );
+    theta_X = atan2(fabs(z), (r-r_p) );
+    if(z == 0){
+      theta_X = atan2(Rc_X*tan(theta0_X), r);
+      if(r == 0) theta_X = M_PI/2;
+    }
+    B_X = B0_X*pow(r_p/r, 2)*exp(-r_p/R_X);
+    //B_X = B0_X*pow(r_p/r, 2);
+  }
+    
+  if(r == 0 || z == 0){
+    Br = 0;
+    B_phi = 0;
+    Bx = 0;
+    By = 0;
+    Bz = B_X;
+  }else{
+    r_ = sqrt(1+z*z);
+    if(r-r_ >= (Rc_X-1) ){
+      dzdr = atan2(r_, fabs(z) );
+    }
+    if(r-r_ < (Rc_X-1) ){
+      a2 = r*r/(1+z*z)/pow(Rc_X, 2);
+      dzdr = atan2(r/a2/pow(Rc_X, 1), fabs(z));
+    }
+    //cout << scientific << r << " " << z << " " << dzdr << endl;
+    
+    if(z > 0){
+      Br += B_X*sqrt(1./(1+pow(dzdr, 2)) );
+      Bx += Br*cos(phi);
+      By += Br*sin(phi);
+      Bz += B_X*sqrt(1-1./(1+pow(dzdr, 2)) );
+    }
+    if(z < 0){
+      Br += B_X*sqrt(1./(1+pow(dzdr, 2)) );
+      Bx -= Br*cos(phi);
+      By -= Br*sin(phi);
+      Bz += B_X*sqrt(1-1./(1+pow(dzdr, 2)) );
+    }
+  }
+#endif
+
+
+#if 0
+  double theta, beta, k, dtr=acos(-1.)/180./*degrees to radians*/, Bregx, Bregy, Bregz; // 
+  theta=atan2(y,x); // NB theta defined differently from above
+  beta=90.*dtr-atan(z/r);
+  if(z == 0 && r == 0) beta = acos(-1.);
+  
+#if 0
+  if(fabs(z)<=0.3 && r<=0.1){ //Btot=const =2mG from prouza
+    k=pow(10.,-3.); k*=1e6;
+    Bregx=-(3./2.)*k*sin(2.*beta)*sin(theta);
+    Bregy=-(3./2.)*k*sin(2.*beta)*cos(theta);
+    Bregz=-k*(3.*cos(beta)*cos(beta)-1.);
+  }
+
+  if(fabs(z)>0.3 && r<=0.1){ //Btot=const =2mG from prouza 
+    k=2.*pow(10.,-7.); k*=1e6;
+    Bregx=-(3./2.)*k*sin(2.*beta)*sin(theta)/pow(r,3.);
+    Bregy=-(3./2.)*k*sin(2.*beta)*cos(theta)/pow(r,3.);
+    Bregz=-k*(3.*cos(beta)*cos(beta)-1.)/pow(r,3.);
+  }
+#endif
+#if 1
+  if(r<=0.1){ //Btot=const =2mG from prouza
+    k=pow(10.,-3.); k*=1e6;
+    Bregx=-(3./2.)*k*sin(2.*beta)*sin(theta);
+    Bregy=-(3./2.)*k*sin(2.*beta)*cos(theta);
+    Bregz=-k*(3.*cos(beta)*cos(beta)-1.);
+  }
+#endif
+
+  if(r>0.1 && r<=2.){ // from prouza
+    k=2.*pow(10.,-7.); k*=1e6;
+    Bregx=-(3./2.)*k*sin(2.*beta)*sin(theta)/pow(r,3.);
+    Bregy=-(3./2.)*k*sin(2.*beta)*cos(theta)/pow(r,3.);
+    Bregz=-k*(3.*cos(beta)*cos(beta)-1.)/pow(r,3.);
+  }
+
+  if(r>2. && r<=5.){ // from prouza
+    k=5.*pow(10.,-7.); k*=1e6;
+    Bregx=-(3./2.)*k*sin(2.*beta)*sin(theta);
+    Bregy=-(3./2.)*k*sin(2.*beta)*cos(theta);
+    Bregz=-k*(3.*cos(beta)*cos(beta)-1.);
+  }
+
+  if(r>5.){ // from prouza
+    k=pow(10.,-4.); k*=1e6;
+    Bregx=-(3./2.)*k*sin(2.*beta)*sin(theta)/pow(r,3.);
+    Bregy=-(3./2.)*k*sin(2.*beta)*cos(theta)/pow(r,3.);
+    Bregz=-k*(3.*cos(beta)*cos(beta)-1.)/pow(r,3.);
+  }
+  Bx += Bregx;
+  By += Bregy;
+  Bz += Bregz;
+#endif
+
+
+
+  
+  B = sqrt(Bx*Bx +By*By +Bz*Bz);
+  
+  return 0;
+}
+
+// Bᵣ = 0
+// Bᶲ = B₀ᶲ(1-e⁻ʳ/ᴿ₀)
+// Bᶻ = B₀ᶻe⁻ʳ/ᴿ₀ = εB₀ᶲe⁻ʳ/ᴿ₀
+int Galpani::B_field_3D_simple(double x, double y, double z, double &B, double &Br, double &Bx, double &By, double &Bz){
+  double r, phi, R0 = 3.5/*KPC*/, B0_PHI = 1., B0_Z, epsilon = .5, B_phi; // εᴮ= 0.2, 0.5, 1.
+  r   = sqrt(x*x+y*y);
+  phi = atan2(y, x);
+
+  Br    = 0.;
+  B_phi = B0_PHI*(1-exp(-r/R0) );
+  B0_Z  = epsilon*B0_PHI;
+  
+  Bx = Br*cos(phi) -B_phi*sin(phi);
+  By = Br*sin(phi) +B_phi*cos(phi);
+  Bz = B0_Z*exp(-r/R0);
+  
+  B  = sqrt(Bx*Bx +By*By +Bz*Bz);
+  
+  return 0;
+}

@@ -1,0 +1,9 @@
+#   Emax can not set too large, due to the failure of the effect of Kcapture
+
+FITSPATH                     = /home/strickland/CRPropagation/galprop/FITS
+DATAPATH                     = /home/strickland/CRPropagation/galprop/galpdata
+GALDEFPATH                   = /home/strickland/CRPropagation/3Dtransport/galdef
+OUTPUTPATH                   = /home/strickland/CRPropagation/3Dtransport
+OUTPUTPREFIX                 = output
+
+GALDEFNAME                   = lw1007

@@ -1,0 +1,84 @@
+reset
+
+#set terminal postscript eps enhanced color dl 3 #mono solid
+#font 'Times New Roman, 20'
+#set size 1.1, 1.5
+#set output "test_prot_spec_1.eps"
+
+
+set xlabel 'E_{k} [GeV]' font 'Times New Roman, 20' offset 0,-.5
+set xrange [1.e-1:2.e3]
+#set xrange [1.e0:2.e3]
+set logscale x
+set format x '10^{%L}'
+set xtics in scale 1.5,.75
+set xtics font 'Times New Roman, 20' offset 0,-.3
+set mxtic 10
+
+
+set ylabel "E^{2.7}_{k} dN/dE_{k} [GeV^{1.7} m^{-2} s^{-1} sr^{-1}]" font 'Times New Roman, 20' offset -0,0
+set yrange [5e2:2e4] # for proton
+set logscale y
+set format y '10^{%L}'
+set ytics in scale 1.5,.75
+set ytics font 'Times New Roman, 20' offset 0,0
+set mytic 10
+
+
+
+######  "set border" and "unset border" control the display of the graph borders for the plot and splot commands.
+
+set border lw 1.5
+
+
+######  The margin is the distance between the plot border and the outer edge of the canvas.
+######  To alter the distance between the inside of the plot border and the data in the plot itself, see "set offsets".
+######  "at screen" indicates that the margin is specified as a fraction of the full drawing area.
+
+#set bmargin at screen
+set lmargin at screen .2
+#set rmargin at screen
+#set tmargin at screen
+
+#set key on left top vertical spacing 2 width 1 height 1 samplen 3  #box #horizontal
+set key at screen 0.94,.550 spacing 3 width 1 height 1 samplen 3 # box #horizontal
+set key font 'Times New Roman, 10'
+set key reverse
+set key Left
+#unset key
+
+
+#####    function
+mc2    = .938272013
+A = 1
+Z = 1
+
+
+Ek(Ri) = sqrt(Ri**2 + mc2**2) -mc2
+E(Ri)  = sqrt(Ri**2 + mc2**2)
+Ri(Ek) = sqrt((Ek+mc2)**2 -mc2**2)
+
+M2p7(Ek) = (Ek)**(2.7)
+E2(x1,x2) = exp((log(x1)+log(x2))/2.)
+
+sigma(x1,x2) = sqrt(x1*x1+x2*x2)
+
+
+
+p(Ek) = sqrt((Ek+m)**2-m**2)
+
+#plot 'flat/test_prot_spec_19_0_0.dat' u ($1/1e3):($1**2.8*$4) t 'r = 0 kpc, {/Symbol F}(E_k){/Symbol \264}E^{2.37}' w l lw 5
+
+#plot '../flat/test_prot_spec_19_0_0.dat' u (p($1)):(p($1)**2.698*$4) t 'r = 0 kpc, {/Symbol F}(E_k){/Symbol \264}E^{2.37}' w l lw 5, \
+      1.6e26 w l lw 5
+
+
+#     '0904_1/test_1_dr_bg_0_0_2D.dat' u ($1):($1**2.7*$2/1.0) t '' w l lw 4 lc rgb 'green', \
+     '/home/liuwei/Research/PROGRAM/CRPropagation/anisotropy/2D_v1.1/res/lw1001/test_-1_1_dr_bg_8_0_2D.dat'  u 1:($1**2.7*$2) t '' w l lw 4 lc rgb 'blue', \
+     'test.dat' u 1:($1**2.7*$2) t 'test' w l lw 3 lc rgb 'orange', \
+     'test1.dat' u 1:($1**2.7*$2) t 'test' w l lw 3 lc rgb 'brown', \
+     x**(-2.83+2.7)*2.3e4 w l lw 4
+
+# proton
+plot '/home/liuwei/Research/PROGRAM/CRPropagation/data/AMS-02/AMS-02_prot_2015.dat' u (Ek(sqrt($1*$2))):(Ek(sqrt($1*$2))**2.7*$3*$10):(Ek(sqrt($1*$2))**2.7*sigma($4,$9)*$10)  t 'AMS-02'  w yerrorbars lw 3 pt 5 lc rgb 'red', \
+     '../lw1007/test_-1_1_dr_bg_8_0_2D.dat' u 1:($1**2.7*$2) w l lw 4 lc rgb 'blue'

@@ -1,0 +1,89 @@
+DIR_SRC       = .
+DIR_INC       = ../inc
+DIR_OBJ       = ../obj
+DIR_MOD       = ../mod
+DIR_RES       = ../res
+
+LIB_PATH      = /home/strickland
+HEALPIX_PATH  = /home/strickland
+GALP_PATH     = /home/strickland/CRPropagation/galprop/55/galp
+
+IFLAG   = -I$(GALP_PATH)/include -I$(LIB_PATH)/include -I$(LIB_PATH)/include/gsl/ -I$(HEALPIX_PATH)/software/Healpix_2.20a/src/cxx/generic_gcc/include
+#$(warning $(IFLAG))
+
+
+#    Edit for Packages directories
+LIB_GALP      = -L$(GALP_PATH)/lib -lgalprop -lskymap
+LIB_GALPTOOLS = -L$(LIB_PATH)/lib  -lgalstruct -lprocesses -lnuclei -lutils
+LIB_CFITSIO   = -L$(LIB_PATH)/lib -lcfitsio
+LIB_CCFITS    = -L$(LIB_PATH)/lib -lCCfits
+LIB_GSL       = -L$(LIB_PATH)/lib -lgsl -lgslcblas -lm
+LIB_HEALPIX   = -L$(HEALPIX_PATH)/software/Healpix_2.20a/src/cxx/generic_gcc/lib -lhealpix_cxx -lcxxsupport -lfftpack
+LIB_CLHEP     = -L$(LIB_PATH)/lib -lCLHEP
+LIB_WCSLIB    = #-L$(LIB_PATH)/lib -lwcs
+LIB_XERCES_C  = -lxerces-c
+LIB_ROOT      = `root-config --cflags --glibs`
+#$(warning $(LIB_GALP))
+#$(warning $(LIB_CFITSIO))
+#$(warning $(LIB_CCFITS))
+#$(warning $(LIB_GSL))
+#$(warning $(LIB_HEALPIX))
+#$(warning $(LIB_CLHEP))
+
+GLIBS    = $(LIB_GALP) $(LIB_GALPTOOLS) $(LIB_CFITSIO) $(LIB_CCFITS) $(LIB_GSL) $(LIB_HEALPIX) $(LIB_CLHEP) $(LIB_WCSLIB) $(LIB_XERCES_C) $(LIB_ROOT)
+#$(warning $(GLIBS))
+
+LIB      = -lstdc++ -lgcc $(GLIBS) -lgfortran #-lworks -llins
+#   in faust
+
+
+
+FF       = gfortran
+#FF       = ifort
+FFLAGS   = -gdwarf-2 -g3 -O0 
+#-vec-report0
+#   in strickland
+#FFLAGS   = -O2 -g -vec-report0
+
+
+CC       = g++ -std=c++0x
+CFLAGS   = -gdwarf-2 -g3 -O0 -I$(DIR_INC) 
+#CFLAGS   = -g -Wall -I$(DIR_INC)
+
+
+OBJ      = main.o
+
+CCOBJS   = Galpani.o D_para.o D_perp.o fill_transport_arrays.o gen_secondary_source.o pseudo_source.o diffusion_tensor.o B_field_3D_model2.o propagate_particles.o propel.o
+
+#enter_galprop.o readconfigfile.o writeconfigfile.o GALPROP_RESULT.o input_result.o error_check.o #ANISOTROPY.o linint.o source_function.o steady_state.o DIFFUSION.o Q_SPECTRUM.o SOLAR_MODULATION.o
+
+#FOBJS    = solar_mod.o
+#   test solar modualtion, the solar_mod.f is from yuan qiang. Need file linint.for
+
+#FFOBJS  = linint_yuan.o
+#   test solar modulation, the linint.for is from yuan qiang. In order to use this .for file, linint.o TOTAL_FLUX.o CRRATION.o in CCOBJS have to be commented.
+
+all : a
+
+a : $(OBJ) $(CCOBJS) #$(FOBJS) $(FFOBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
+
+
+$(OBJ) : %.o : %.cc $(HEADERS)
+	$(CC) $(CFLAGS) $(IFLAG) -c $<
+
+
+$(CCOBJS) : %.o : %.cc $(HEADERS)
+	$(CC) $(CFLAGS) $(IFLAG) -c $<
+
+
+# $(FOBJS) : %.o : %.f
+# 	$(FF) $(FFLAGS) -c $<
+
+# $(FFOBJS) : %.o : %.for
+# 	$(FF) $(FFLAGS) -c $<
+
+
+.PHONY : clean
+clean :
+	rm -f a test test2 *.o *.mod *.d *.pc *.obj $(DIR_OBJ)/*.o $(DIR_MOD)/*.mod $(DIR_SRC)/*.o core
