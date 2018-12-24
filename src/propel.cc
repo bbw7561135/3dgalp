@@ -236,13 +236,28 @@ int Galpani::propel(Particle& particle) {
             for (ip = 0; ip < particle.n_pgrid; ++ip) {
 	      // modified by Wei Liu, 2018.12.18
 #ifdef ITERAT
+	      // ∂Drr/∂r∂ψ/∂r = (Drr[i+1]-Drr[i-1])/4Δr² (ψ[i+1]-ψ[i-1])
 	      const double dDrrdr=(particle.Drr_wei.d2[ir+1][iz].s[ip]-particle.Drr_wei.d2[ir-1][iz].s[ip]) *pow(2.*particle.dr,-2.);
+	      // ∂Dzz/∂z∂ψ/∂z = (Dzz[k+1]-Dzz[k-1])/4Δz² (ψ[k+1]-ψ[k-1])
 	      const double dDzzdz=(particle.Dzz_wei.d2[ir][iz+1].s[ip]-particle.Dzz_wei.d2[ir][iz-1].s[ip]) *pow(2.*particle.dz,-2.);
 
 	      alpha1_r.d2[ir][iz].s[ip] -= dDrrdr;
 	      alpha3_r.d2[ir][iz].s[ip] += dDrrdr;
 	      alpha1_z.d2[ir][iz].s[ip] -= dDzzdz;
 	      alpha3_z.d2[ir][iz].s[ip] += dDzzdz;
+
+	      // ∂Drz/∂r∂ψ/∂z = (Drz[i+1]-Drz[i-1])/4ΔrΔz (ψ[k+1]-ψ[k-1])
+	      const double dDrzdr=(particle.Drz_wei.d2[ir+1][iz].s[ip]-particle.Drz_wei.d2[ir-1][iz].s[ip])/(4.*particle.dr*particle.dz);
+	      // ∂Drz/∂z∂ψ/∂r = (Drz[k+1]-Drz[k-1])/4ΔrΔz (ψ[i+1]-ψ[i-1])
+	      const double dDrzdz=(particle.Drz_wei.d2[ir][iz+1].s[ip]-particle.Drz_wei.d2[ir][iz-1].s[ip])/(4.*particle.dr*particle.dz);
+	      
+	      // Drz/r∂ψ/∂z = Drz/r/2Δz (ψ[k+1]-ψ[k-1])
+	      const double a = particle.Drz_wei.d2[ir][iz].s[ip]/particle.r[ir]/(2.*particle.dz);
+
+	      alpha1_r.d2[ir][iz].s[ip] -= (dDrrdr +dDrzdz);
+	      alpha3_r.d2[ir][iz].s[ip] += (dDrrdr +dDrzdz);
+	      alpha1_z.d2[ir][iz].s[ip] -= (dDzzdz +dDrzdr +a);
+	      alpha3_z.d2[ir][iz].s[ip] += (dDzzdz +dDrzdr +a);
 #else
                 const double dDxxdr=(particle.Dxx.d2[ir+1][iz].s[ip]-particle.Dxx.d2[ir-1][iz].s[ip]) *pow(2.*particle.dr,-2.);
                 const double dDxxdz=(particle.Dxx.d2[ir][iz+1].s[ip]-particle.Dxx.d2[ir][iz-1].s[ip]) *pow(2.*particle.dz,-2.);
